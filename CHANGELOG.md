@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.6.3] - 2025-09-18
 
 - Redirect to / after login if user is not allowed to go to /admin
 
@@ -78,6 +78,7 @@ required is still 3.0.0
 
 Initial release
 
+[0.6.3]: https://github.com/biblibre/omeka-s-module-CAS/releases/tag/v0.6.3
 [0.6.2]: https://github.com/biblibre/omeka-s-module-CAS/releases/tag/v0.6.2
 [0.6.1]: https://github.com/biblibre/omeka-s-module-CAS/releases/tag/v0.6.1
 [0.6.0]: https://github.com/biblibre/omeka-s-module-CAS/releases/tag/v0.6.0
