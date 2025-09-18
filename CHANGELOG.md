@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+- Redirect to / after login if user is not allowed to go to /admin
+
 ## [0.6.2] - 2025-05-26
 
 - Fix login error when multiple CAS accounts have the same email address

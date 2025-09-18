@@ -110,7 +110,11 @@ class LoginController extends AbstractActionController
             return $this->redirect()->toUrl($redirectUrl);
         }
 
-        return $this->redirect()->toRoute('admin');
+        if ($this->userIsAllowed('Omeka\Controller\Admin\Index', 'browse')) {
+            return $this->redirect()->toRoute('admin');
+        }
+
+        return $this->redirect()->toRoute('top');
     }
 
     protected function serviceValidate($ticket)
