@@ -40,12 +40,14 @@ class Module extends AbstractModule
         $connection = $services->get('Omeka\Connection');
         $connection->exec('CREATE TABLE cas_user (id VARCHAR(255) NOT NULL, user_id INT NOT NULL, INDEX IDX_8DA51140A76ED395 (user_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE = InnoDB');
         $connection->exec('ALTER TABLE cas_user ADD CONSTRAINT FK_8DA51140A76ED395 FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE');
+        $connection->exec('CREATE TABLE cas_ticket (ticket VARCHAR(255) NOT NULL, session_id VARCHAR(255) NOT NULL, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL, INDEX IDX_A28BE1D7613FECDF (session_id), PRIMARY KEY(ticket)) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE = InnoDB');
     }
 
     public function uninstall(ServiceLocatorInterface $services)
     {
         $connection = $services->get('Omeka\Connection');
         $connection->exec('DROP TABLE IF EXISTS cas_user');
+        $connection->exec('DROP TABLE IF EXISTS cas_ticket');
     }
 
     public function upgrade($oldVersion, $newVersion, ServiceLocatorInterface $serviceLocator)
@@ -57,6 +59,10 @@ class Module extends AbstractModule
             $connection->exec('ALTER TABLE cas_user DROP INDEX UNIQ_8DA51140A76ED395');
             $connection->exec('ALTER TABLE cas_user ADD INDEX IDX_8DA51140A76ED395 (user_id)');
             $connection->exec('ALTER TABLE cas_user ADD CONSTRAINT FK_8DA51140A76ED395 FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE');
+        }
+
+        if (Comparator::lessThan($oldVersion, '0.7.0')) {
+            $connection->exec('CREATE TABLE IF NOT EXISTS cas_ticket (ticket VARCHAR(255) NOT NULL, session_id VARCHAR(255) NOT NULL, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL, INDEX IDX_A28BE1D7613FECDF (session_id), PRIMARY KEY(ticket)) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE = InnoDB');
         }
     }
 
@@ -132,6 +138,10 @@ class Module extends AbstractModule
         $acl->allow(
             null,
             'CAS\Controller\Login'
+        );
+        $acl->allow(
+            null, 
+            'CAS\Controller\Slo'
         );
     }
 }

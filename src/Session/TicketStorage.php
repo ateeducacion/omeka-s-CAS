@@ -2,13 +2,17 @@
 
 namespace CAS\Session;
 
+use CAS\Entity\CasTicket;
+use DateTimeImmutable;
+use Doctrine\ORM\EntityManagerInterface;
+
 class TicketStorage
 {
-    private string $storagePath;
+    private EntityManagerInterface $entityManager;
 
-    public function __construct(string $storagePath)
+    public function __construct(EntityManagerInterface $entityManager)
     {
-        $this->storagePath = $storagePath;
+        $this->entityManager = $entityManager;
     }
 
     public function store(string $ticket, string $sessionId): void
@@ -17,30 +21,44 @@ class TicketStorage
             return;
         }
 
-        $this->write(function (array $map) use ($ticket, $sessionId) {
-            $map[$ticket] = $sessionId;
-            return $map;
-        });
+        $repository = $this->entityManager->getRepository(CasTicket::class);
+        $entity = $repository->find($ticket);
+
+        $now = new DateTimeImmutable('now');
+
+        if ($entity === null) {
+            $entity = new CasTicket();
+            $entity->setTicket($ticket);
+            $entity->setCreatedAt($now);
+        }
+
+        $entity->setSessionId($sessionId);
+        $entity->setUpdatedAt($now);
+
+        $this->entityManager->persist($entity);
+        $this->entityManager->flush();
     }
 
     public function getSessionId(string $ticket): ?string
     {
-        $map = $this->read();
-        return $map[$ticket] ?? null;
+        $entity = $this->entityManager->find(CasTicket::class, $ticket);
+
+        return $entity ? $entity->getSessionId() : null;
     }
 
     public function remove(string $ticket): ?string
     {
-        $removedSessionId = null;
-        $this->write(function (array $map) use ($ticket, &$removedSessionId) {
-            if (array_key_exists($ticket, $map)) {
-                $removedSessionId = $map[$ticket];
-                unset($map[$ticket]);
-            }
-            return $map;
-        });
+        $entity = $this->entityManager->find(CasTicket::class, $ticket);
+        if ($entity === null) {
+            return null;
+        }
 
-        return $removedSessionId;
+        $sessionId = $entity->getSessionId();
+
+        $this->entityManager->remove($entity);
+        $this->entityManager->flush();
+
+        return $sessionId;
     }
 
     /**
@@ -48,81 +66,23 @@ class TicketStorage
      */
     public function removeBySessionId(string $sessionId): array
     {
+        $repository = $this->entityManager->getRepository(CasTicket::class);
+        $entities = $repository->findBy(['sessionId' => $sessionId]);
+
+        if (!$entities) {
+            return [];
+        }
+
         $removedTickets = [];
-        $this->write(function (array $map) use ($sessionId, &$removedTickets) {
-            foreach ($map as $ticket => $storedSessionId) {
-                if ($storedSessionId === $sessionId) {
-                    unset($map[$ticket]);
-                    $removedTickets[] = $ticket;
-                }
-            }
-            return $map;
-        });
+
+        foreach ($entities as $entity) {
+            $removedTickets[] = $entity->getTicket();
+            $this->entityManager->remove($entity);
+        }
+
+        $this->entityManager->flush();
 
         return $removedTickets;
-    }
-
-    private function read(): array
-    {
-        if (!is_file($this->storagePath)) {
-            return [];
-        }
-
-        $handle = fopen($this->storagePath, 'rb');
-        if ($handle === false) {
-            return [];
-        }
-
-        try {
-            if (!flock($handle, LOCK_SH)) {
-                return [];
-            }
-
-            $content = stream_get_contents($handle);
-            flock($handle, LOCK_UN);
-        } finally {
-            fclose($handle);
-        }
-
-        $data = json_decode($content ?: '[]', true);
-        return is_array($data) ? $data : [];
-    }
-
-    /**
-     * @param callable $writer fn(array $map): array
-     */
-    private function write(callable $writer): void
-    {
-        $directory = dirname($this->storagePath);
-        if (!is_dir($directory)) {
-            @mkdir($directory, 0777, true);
-        }
-
-        $handle = fopen($this->storagePath, 'c+b');
-        if ($handle === false) {
-            return;
-        }
-
-        try {
-            if (!flock($handle, LOCK_EX)) {
-                return;
-            }
-
-            $existing = stream_get_contents($handle);
-            $map = json_decode($existing ?: '[]', true);
-            $map = is_array($map) ? $map : [];
-
-            $map = $writer($map);
-
-            ftruncate($handle, 0);
-            rewind($handle);
-            fwrite($handle, json_encode($map, JSON_UNESCAPED_SLASHES));
-            fflush($handle);
-
-            flock($handle, LOCK_UN);
-        } finally {
-            fclose($handle);
-        }
     }
 }
 
