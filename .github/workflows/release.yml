@@ -15,7 +15,7 @@ jobs:
       - name: Set environment variables
         run: |
           echo "RELEASE_TAG=${GITHUB_REF##*/}" >> $GITHUB_ENV
-          MODULE="$(basename "$PWD")-forked"
+          MODULE="$(basename "$PWD")"
           echo "MODULE=$MODULE" >> $GITHUB_ENV
 
       - name: Create package using the Makefile
