@@ -1,4 +1,4 @@
-MODULE := $(notdir $(CURDIR))
+MODULE := $(notdir $(CURDIR))-forked
 VERSION := $(shell php -r 'echo parse_ini_file("config/module.ini")["version"];')
 ZIP := ${MODULE}-${VERSION}.zip
 
