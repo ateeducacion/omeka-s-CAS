@@ -1,6 +1,6 @@
 MODULE := $(notdir $(CURDIR))
 VERSION := $(shell php -r 'echo parse_ini_file("config/module.ini")["version"];')
-ZIP := ${MODULE}-v${VERSION}.zip
+ZIP := ${MODULE}-v${VERSION}.zi
 
 dist: ${ZIP}
 
