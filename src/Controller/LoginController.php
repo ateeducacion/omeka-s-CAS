@@ -94,6 +94,10 @@ class LoginController extends AbstractActionController
             $cas = $casResponse['authenticationSuccess'];
 
             $user = $this->getUser($cas);
+            if (!$user) {
+                $this->messenger()->addError($this->translate('User account not found. Contact administrator to create an account.'));
+                return $this->redirect()->toRoute('login');
+            }
             if (!$user->isActive()) {
                 $this->messenger()->addError($this->translate('User is inactive'));
                 return $this->redirect()->toRoute('login');
@@ -185,6 +189,11 @@ class LoginController extends AbstractActionController
         if (!$casUser) {
             $user = $em->getRepository(User::class)->findOneBy(['email' => $cas_user_email]);
             if (!$user) {
+                $createUserOnLogin = $this->settings()->get('cas_create_user_on_login', true);
+                if (!$createUserOnLogin) {
+                    return null;
+                }
+
                 $user = new User();
                 $user->setName($cas_user_name);
                 $user->setEmail($cas_user_email);

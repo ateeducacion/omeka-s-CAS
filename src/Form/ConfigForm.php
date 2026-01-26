@@ -41,6 +41,19 @@ class ConfigForm extends Form
         ]);
 
         $this->add([
+            'type' => 'Checkbox',
+            'name' => 'create_user_on_login',
+            'options' => [
+                'label' => 'Create user account on login', // @translate
+                'info' => 'If checked, a new Omeka S user account will be created automatically when a CAS user logs in for the first time. If unchecked, only existing users can log in via CAS.', // @translate
+            ],
+            'attributes' => [
+                'id' => 'create_user_on_login',
+                'required' => false,
+            ],
+        ]);
+
+        $this->add([
             'type' => 'Omeka\Form\Element\RoleSelect',
             'name' => 'role',
             'options' => [
