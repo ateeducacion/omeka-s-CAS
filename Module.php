@@ -93,12 +93,15 @@ class Module extends AbstractModule
         $form = $formElementManager->get('CAS\Form\ConfigForm');
         $form->setData([
             'url' => $settings->get('cas_url'),
-            'create_user_on_login' => $settings->get('cas_create_user_on_login', true),
-            'role' => $settings->get('cas_role'),
             'user_id_attribute' => $settings->get('cas_user_id_attribute'),
             'user_name_attribute' => $settings->get('cas_user_name_attribute'),
             'user_email_attribute' => $settings->get('cas_user_email_attribute'),
+            // Login options
+            'create_user_on_login' => $settings->get('cas_create_user_on_login', true),
+            'role' => $settings->get('cas_role'),
+            'update_user_on_login' => $settings->get('cas_update_user_on_login', false),
             'show_login_link_in_user_bar' => $settings->get('cas_show_login_link_in_user_bar'),
+            // Logout options
             'global_logout' => $settings->get('cas_global_logout'),
             'logout_redirect_service' => $settings->get('cas_logout_redirect_service'),
         ]);
@@ -119,13 +122,20 @@ class Module extends AbstractModule
         }
 
         $formData = $form->getData();
+
+        // Main configuration fields
         $settings->set('cas_url', $formData['url']);
-        $settings->set('cas_create_user_on_login', !empty($formData['create_user_on_login']));
-        $settings->set('cas_role', $formData['role']);
         $settings->set('cas_user_id_attribute', $formData['user_id_attribute']);
         $settings->set('cas_user_name_attribute', $formData['user_name_attribute']);
         $settings->set('cas_user_email_attribute', $formData['user_email_attribute']);
-        $settings->set('cas_show_login_link_in_user_bar', $formData['show_login_link_in_user_bar']);
+
+        // Login options
+        $settings->set('cas_create_user_on_login', !empty($formData['create_user_on_login']));
+        $settings->set('cas_role', $formData['role']);
+        $settings->set('cas_update_user_on_login', !empty($formData['update_user_on_login']));
+        $settings->set('cas_show_login_link_in_user_bar', !empty($formData['show_login_link_in_user_bar']));
+
+        // Logout options
         $settings->set('cas_global_logout', !empty($formData['global_logout']));
         $settings->set('cas_logout_redirect_service', trim((string) ($formData['logout_redirect_service'] ?? '')));
 

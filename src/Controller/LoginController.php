@@ -151,6 +151,18 @@ class LoginController extends AbstractActionController
         return $httpClient->send();
     }
 
+    /**
+     * Retrieves or creates an Omeka user based on CAS authentication data.
+     *
+     * This method handles the user lookup/creation logic for CAS authentication:
+     * - Extracts user identifier, name, and email from CAS attributes
+     * - Finds existing CAS user mapping or creates a new one
+     * - Optionally updates user attributes on each login if configured
+     *
+     * @param array $cas The CAS authentication success response containing 'user' and 'attributes'
+     * @return User|null The Omeka user entity, or null if user creation is disabled and no matching user exists
+     * @throws \Exception If user identifier cannot be found in CAS response
+     */
     protected function getUser($cas)
     {
         $em = $this->entityManager;
@@ -160,6 +172,7 @@ class LoginController extends AbstractActionController
             'attributes' => $cas['attributes'] ?? [],
         ];
 
+        // Extract user identifier from CAS attributes or use the default 'user' field
         $user_id_attribute = $this->settings()->get('cas_user_id_attribute');
         if ($user_id_attribute) {
             $cas_user_id = $cas['attributes'][$user_id_attribute] ?? null;
@@ -171,6 +184,7 @@ class LoginController extends AbstractActionController
             throw new \Exception('User identifier not found in CAS response');
         }
 
+        // Extract user name from CAS attributes if configured, otherwise fallback to user ID
         $user_name_attribute = $this->settings()->get('cas_user_name_attribute');
         if ($user_name_attribute && isset($cas['attributes'][$user_name_attribute])) {
             $cas_user_name = $cas['attributes'][$user_name_attribute];
@@ -178,6 +192,7 @@ class LoginController extends AbstractActionController
             $cas_user_name = $cas_user_id;
         }
 
+        // Extract user email from CAS attributes if configured, otherwise fallback to user ID
         $user_email_attribute = $this->settings()->get('cas_user_email_attribute');
         if ($user_email_attribute && isset($cas['attributes'][$user_email_attribute])) {
             $cas_user_email = $cas['attributes'][$user_email_attribute];
@@ -185,10 +200,15 @@ class LoginController extends AbstractActionController
             $cas_user_email = $cas_user_id;
         }
 
+        // Check if update_user_on_login option is enabled
+        $updateUserOnLogin = $this->settings()->get('cas_update_user_on_login', false);
+
         $casUser = $em->find('CAS\Entity\CasUser', $cas_user_id);
         if (!$casUser) {
+            // CAS user not found, try to find an existing Omeka user by email
             $user = $em->getRepository(User::class)->findOneBy(['email' => $cas_user_email]);
             if (!$user) {
+                // No existing user found, create a new one if allowed
                 $createUserOnLogin = $this->settings()->get('cas_create_user_on_login', true);
                 if (!$createUserOnLogin) {
                     return null;
@@ -207,6 +227,9 @@ class LoginController extends AbstractActionController
 
                 $events->trigger('cas.user.create.post', $user, $eventArgs);
             } else {
+                // Existing user found by email, optionally update attributes from CAS
+                $this->updateUserAttributesIfEnabled($user, $cas_user_name, $cas_user_email, $user_name_attribute, $user_email_attribute, $updateUserOnLogin);
+
                 $events->trigger('cas.user.update.pre', $user, $eventArgs);
 
                 $em->persist($user);
@@ -215,6 +238,7 @@ class LoginController extends AbstractActionController
                 $events->trigger('cas.user.update.post', $user, $eventArgs);
             }
 
+            // Create the CAS user mapping to link CAS identity with Omeka user
             $casUser = new CasUser();
             $casUser->setId($cas_user_id);
             $casUser->setUser($user);
@@ -222,7 +246,11 @@ class LoginController extends AbstractActionController
             $em->persist($casUser);
             $em->flush();
         } else {
+            // CAS user exists, get the linked Omeka user
             $user = $casUser->getUser();
+
+            // Optionally update user attributes from CAS on every login
+            $this->updateUserAttributesIfEnabled($user, $cas_user_name, $cas_user_email, $user_name_attribute, $user_email_attribute, $updateUserOnLogin);
 
             $events->trigger('cas.user.update.pre', $user, $eventArgs);
 
@@ -233,6 +261,49 @@ class LoginController extends AbstractActionController
         }
 
         return $user;
+    }
+
+    /**
+     * Updates user name and email attributes from CAS if the option is enabled.
+     *
+     * This method checks if the update_user_on_login setting is enabled and
+     * updates the user's name and email only if:
+     * - The setting is enabled
+     * - The corresponding CAS attribute is configured
+     * - The CAS attribute value is not null/empty
+     *
+     * @param User $user The Omeka user entity to update
+     * @param string $cas_user_name The user name obtained from CAS attributes
+     * @param string $cas_user_email The user email obtained from CAS attributes
+     * @param string|null $user_name_attribute The configured CAS attribute name for user name
+     * @param string|null $user_email_attribute The configured CAS attribute name for user email
+     * @param bool $updateUserOnLogin Whether the update_user_on_login setting is enabled
+     * @return void
+     */
+    protected function updateUserAttributesIfEnabled(
+        User $user,
+        $cas_user_name,
+        $cas_user_email,
+        $user_name_attribute,
+        $user_email_attribute,
+        $updateUserOnLogin
+    ) {
+        // Only proceed if update_user_on_login option is enabled
+        if (!$updateUserOnLogin) {
+            return;
+        }
+
+        // Update user name if the CAS attribute is configured and has a non-null value
+        // We check $user_name_attribute to ensure the name came from a CAS attribute, not a fallback
+        if ($user_name_attribute && !empty($cas_user_name)) {
+            $user->setName($cas_user_name);
+        }
+
+        // Update user email if the CAS attribute is configured and has a non-null value
+        // We check $user_email_attribute to ensure the email came from a CAS attribute, not a fallback
+        if ($user_email_attribute && !empty($cas_user_email)) {
+            $user->setEmail($cas_user_email);
+        }
     }
 
     protected function getServiceUrl()
