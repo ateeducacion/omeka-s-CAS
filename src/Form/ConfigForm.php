@@ -27,6 +27,7 @@ class ConfigForm extends Form
 {
     public function init()
     {
+        // CAS Server URL (main configuration)
         $this->add([
             'type' => 'Text',
             'name' => 'url',
@@ -40,19 +41,7 @@ class ConfigForm extends Form
             ],
         ]);
 
-        $this->add([
-            'type' => 'Checkbox',
-            'name' => 'create_user_on_login',
-            'options' => [
-                'label' => 'Create user account on login', // @translate
-                'info' => 'If checked, a new Omeka S user account will be created automatically when a CAS user logs in for the first time. If unchecked, only existing users can log in via CAS.', // @translate
-            ],
-            'attributes' => [
-                'id' => 'create_user_on_login',
-                'required' => false,
-            ],
-        ]);
-
+        //User role to assign to created users (main configuration)
         $this->add([
             'type' => 'Omeka\Form\Element\RoleSelect',
             'name' => 'role',
@@ -65,7 +54,7 @@ class ConfigForm extends Form
                 'required' => true,
             ],
         ]);
-
+        // User attribute mapping fields
         $this->add([
             'type' => 'Text',
             'name' => 'user_id_attribute',
@@ -107,6 +96,33 @@ class ConfigForm extends Form
 
         $this->add([
             'type' => 'Checkbox',
+            'name' => 'create_user_on_login',
+            'options' => [
+                'label' => 'Create user account on login', // @translate
+                'info' => 'If checked, a new Omeka S user account will be created automatically when a CAS user logs in for the first time. If unchecked, only existing users can log in via CAS.', // @translate
+            ],
+            'attributes' => [
+                'id' => 'create_user_on_login',
+                'required' => false,
+            ],
+        ]);
+
+
+        $this->add([
+            'type' => 'Checkbox',
+            'name' => 'update_user_on_login',
+            'options' => [
+                'label' => 'Update user attributes on login', // @translate
+                'info' => 'If checked, user name and email will be updated from the CAS attributes configured above (user name attribute and user email attribute) on every login. Only attributes that are not null will be updated.', // @translate
+            ],
+            'attributes' => [
+                'id' => 'update_user_on_login',
+                'required' => false,
+            ],
+        ]);
+
+        $this->add([
+            'type' => 'Checkbox',
             'name' => 'show_login_link_in_user_bar',
             'options' => [
                 'label' => 'Show CAS login link in user bar', // @translate
@@ -116,6 +132,7 @@ class ConfigForm extends Form
                 'required' => false,
             ],
         ]);
+
 
         $this->add([
             'type' => 'Checkbox',
