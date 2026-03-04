@@ -96,7 +96,11 @@ class LoginController extends AbstractActionController
             $user = $this->getUser($cas);
             if (!$user) {
                 $this->messenger()->addError($this->translate('User account not found. Contact administrator to create an account.'));
-                return $this->redirect()->toRoute('login');
+                $logoutRedirectService = trim((string) $this->settings()->get('cas_logout_redirect_service'));
+                if ($logoutRedirectService) {
+                    return $this->redirect()->toUrl($logoutRedirectService);
+                }
+                return $this->redirect()->toRoute('top');
             }
             if (!$user->isActive()) {
                 $this->messenger()->addError($this->translate('User is inactive'));
